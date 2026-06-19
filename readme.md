@@ -1,107 +1,148 @@
-# Первоначальная настройка проекта TeamFinder
+# CrewLink (TeamFinder, вариант 1)
 
-## 1. Виртуальное окружение
+Pet-платформа для поиска команды над side-проектами.  
+Это моя персональная реализация учебного задания **TeamFinder**: я переработал архитектуру бэкенда под свой стиль, сохранив совместимость с HTML-шаблонами и моделями `User` / `Project`.
 
-Перед началом работы необходимо создать и активировать виртуальное окружение Python.  
-
-
-1. **Создайте виртуальное окружение (в папке проекта):**
-   ```bash
-   python3 -m venv venv
-   ```
-
-   После этого появится папка `venv`, где будут храниться зависимости проекта.
-
-2. **Активируйте окружение:**
-
-    - **Windows (PowerShell):**
-      ```bash
-      venv\Scripts\Activate.ps1
-      ```
-    - **Windows (cmd):**
-      ```bash
-      venv\Scripts\activate
-      ```
-    - **Linux/Mac:**
-      ```bash
-      source venv/bin/activate
-      ```
-
-3. **Установите зависимости из `requirements.txt`:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-   После установки в окружении будут доступны все нужные библиотеки Django-проекта.
-
-## 2. Создание `.env`
-
-Файл `.env` содержит конфиденциальные настройки проекта — ключ Django, параметры БД и другие переменные.  
-
-Особое внимание обратите на строчку `TASK_VERSION=`. 
-Добавьте число, которое соответствует вашему варианту задания. 
-Этот параметр определяет, какие шаблоны использовать для сайта (из папок `templates_var1`/`templates_var2`/`templates_var3`).
-Лишние две папки не из вашего варианта можно удалить.
-
-В репозитории есть пример `.env_example`, который нужно скопировать и заполнить:
-
-```bash
-cp .env_example .env
-```
-
-После этого откройте `.env` и укажите свои значения.  
-
-| Переменная            | Назначение                                                                                                                                                 |
-|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **DJANGO_SECRET_KEY** | Секретный ключ Django, используемый для подписи cookie и токенов. Можно сгенерировать при помощи `get_random_secret_key` из `django.core.management.utils` |
-| **DJANGO_DEBUG**      | Режим отладки. Установите `True` во время разработки.                                                                                                      |
-| **POSTGRES_DB**       | Имя базы данных PostgreSQL, которую будет использовать Django.                                                                                             |
-| **POSTGRES_USER**     | Имя пользователя PostgreSQL.                                                                                                                               |
-| **POSTGRES_PASSWORD** | Пароль пользователя PostgreSQL.                                                                                                                            |
-| **POSTGRES_HOST**     | Адрес сервера БД. В случае локальной разработки localhost.                                                                                                 |
-| **POSTGRES_PORT**     | Порт подключения к БД (по умолчанию `5432`).                                                                                                               |
-| **TASK_VERSION**      | Номер варианта вашего задания. Используется для определения набора HTML-шаблонов.                                                                          |
+**Автор репозитория:** Алексей Ибетуллов (`ibetu`)  
+**Стек:** Django 5.2 · PostgreSQL 16 · Docker · Pillow
 
 ---
 
-## 3. Запуск PostgreSQL
+## Что реализовано
 
-Для работы приложения **TeamFinder** используется база данных **PostgreSQL**.
-По условию задания база данных должна запускаться в контейнере Docker.
+### Базовый функционал
+- регистрация и вход по email;
+- каталог проектов с пагинацией (12 на страницу);
+- профиль участника, редактирование визитки, смена пароля;
+- создание / редактирование / завершение своих проектов;
+- участие в чужих открытых проектах.
 
-В проекте уже есть пример файла `docker-compose.yml`. 
-Используйте готовый или измените под свои нужды, а дальше запускайте:
+### Вариант 1 — избранное
+- переключение избранного (`POST /projects/<id>/toggle-favorite/`);
+- личная страница `/projects/favorites/`.
 
-```bash
+### Вариант 1 — фильтры участников
+На `/users/list/` для авторизованных пользователей:
+- авторы избранных проектов;
+- авторы проектов, где я участник;
+- кому нравятся мои проекты;
+- участники моих проектов.
+
+---
+
+## Как устроен мой бэкенд
+
+Реализовал логику по слоям:
+
+| Слой | Назначение |
+|------|------------|
+| `users/views.py`, `projects/views.py` | тонкие HTTP-обработчики |
+| `users/catalog.py`, `projects/queries.py` | выборки и фильтрация |
+| `projects/actions.py` | JSON-действия (избранное, участие, закрытие) |
+| `users/validators.py`, `users/portrait.py` | валидация и генерация аватаров |
+| `team_finder/paging.py` | общая пагинация |
+
+
+---
+
+## Быстрый старт (Windows)
+
+### 1. Окружение
+
+```powershell
+python -m venv venv
+venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+> **Python 3.14:** если `psycopg2-binary` не ставится, используйте  
+> `pip install "psycopg[binary]"` — Django 5.2 работает с psycopg3.
+
+### 2. Переменные окружения
+
+```powershell
+Copy-Item .env_example .env
+```
+
+Минимальный `.env`:
+
+```env
+DJANGO_SECRET_KEY=your-secret-here
+DJANGO_DEBUG=True
+POSTGRES_DB=team_finder
+POSTGRES_USER=team_finder
+POSTGRES_PASSWORD=team_finder
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+TASK_VERSION=1
+```
+
+### 3. PostgreSQL в Docker
+
+```powershell
 docker compose up -d
 ```
 
-`-d` значит `detach`, то есть контейнер продолжит работать в фоне. Чтобы его остановить, надо будет ввести
+Если образ `postgres:16` не скачивается, можно поднять Alpine-вариант:
 
-```bash
-docker compose down
+```powershell
+docker run -d --name teamfinder_db -p 5432:5432 --env-file .env `
+  -v teamfinder_postgres_data:/var/lib/postgresql/data postgres:16-alpine
 ```
 
-Если возникает ошибка "permission denied while trying to connect to the Docker daemon socket", то может потребоваться добавить `sudo` перед командой.
+### 4. Миграции и запуск
+
+```powershell
+venv\Scripts\python manage.py migrate
+venv\Scripts\python manage.py runserver
+```
+
+Приложение: [http://127.0.0.1:8000/projects/list/](http://127.0.0.1:8000/projects/list/)
 
 ---
 
-После этого база данных будет доступна по адресу `localhost:5432`.  
-Нужно будет использовать эти же параметры в файле `.env`.
+## Демо-данные (создаются миграциями)
 
-> Если на компьютере уже развёрнут сервер БД на порте 5432, и вы не хотите создавать БД для этого проекта на этом сервере, целесообразнее будет изменить порт на нестандартный.
-> Нестандартный порт нужно будет поставить слева в паре портов в docker-compose (`"5433":"5432"`) и в .env.
+Пароль для всех демо-аккаунтов: **`crewlink2026`**
 
-## 4. Запуск Django
+### Участники
 
-После заполнения `.env` и настройки базы данных можно запустить сервер разработки:
+| Email | Имя | Роль в демо |
+|-------|-----|-------------|
+| `ibetu@crewlink.dev` | Алексей Ибетуллов | Я |
+| `sofia.m@crewlink.dev` | София Морозова | дизайн / фронт |
+| `artyom.k@crewlink.dev` | Артём Климов | DevOps |
+| `ops@crewlink.dev` | Команда Админ | суперпользователь |
 
-```bash
-python manage.py runserver
+### Проекты
+
+| Название | Автор | Статус |
+|----------|-------|--------|
+| Проект 1 | Алексей Ибетуллов | открыт |
+| Проект 2 | София Морозова | открыт |
+| Проект 3 | Алексей Ибетуллов | закрыт |
+
+Файлы сидов:
+- `users/migrations/0004_seed_demo_members.py`
+- `projects/migrations/0003_seed_demo_ventures.py`
+
+---
+
+## Сброс базы после смены миграций
+
+Если переименовывали migration-файлы, нужен чистый прогон:
+
+```powershell
+docker stop teamfinder_db
+docker rm teamfinder_db
+docker volume rm teamfinder_postgres_data
+docker run -d --name teamfinder_db -p 5432:5432 --env-file .env `
+  -v teamfinder_postgres_data:/var/lib/postgresql/data postgres:16-alpine
+venv\Scripts\python manage.py migrate
 ```
 
-Теперь проект доступен по адресу [http://localhost:8000](http://localhost:8000). 
-Если видите ракету с надписью "The install worked successfully! Congratulations!", то запуск прошёл успешно, Django работает!
-Осталось всего ничего: реализовать весь проект!
+---
 
-Если в процессе разработки способ развертывания приложения поменяется, обновите `readme.md` с пометкой ревьюеру, как запускать и проверять приложение.
+## Заметки для ревьюера
+
+- Для проверки избранного и фильтров войдите под `ibetu@crewlink.dev`.
