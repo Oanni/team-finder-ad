@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError
 
-from users.identifiers import PHONE_MAX_LENGTH, SECRET_MIN_LEN
+from users.identifiers import ABOUT_TEXTAREA_ROWS, PHONE_MAX_LENGTH, SECRET_MIN_LEN
 from users.portrait import build_initial_portrait
 from users.validators import assert_github_host, normalize_mobile_number
 
@@ -199,7 +199,10 @@ class MemberProfileForm(forms.ModelForm):
             ),
             'avatar': forms.FileInput(),
             'about': forms.Textarea(
-                attrs={'placeholder': 'Расскажите о себе', 'rows': 4}
+                attrs={
+                    'placeholder': 'Расскажите о себе',
+                    'rows': ABOUT_TEXTAREA_ROWS,
+                }
             ),
         }
 

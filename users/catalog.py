@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Prefetch
 
+from projects.models import Project
 from team_finder.paging import slice_for_page
 from users.identifiers import (
     ADMIRERS_OF_MINE_KEY,
@@ -14,7 +16,18 @@ Member = get_user_model()
 
 
 def _base_roster():
-    return Member.objects.all().order_by('-date_joined')
+    return (
+        Member.objects
+        .prefetch_related(
+            Prefetch(
+                'owned_projects',
+                queryset=Project.objects.select_related('owner'),
+            ),
+            'favorites',
+            'participated_projects',
+        )
+        .order_by('-date_joined')
+    )
 
 
 def _apply_catalog_filter(roster, viewer, filter_key):

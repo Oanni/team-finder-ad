@@ -8,7 +8,9 @@ from django.core.files.base import ContentFile
 
 from users.identifiers import (
     PORTRAIT_EDGE,
+    PORTRAIT_FALLBACK_MAILBOX,
     PORTRAIT_GLYPH_SIZE,
+    PORTRAIT_HASH_DIGEST_SIZE,
     PORTRAIT_PALETTE,
     PORTRAIT_TYPEFACE,
 )
@@ -24,8 +26,8 @@ def _palette_index(member_record):
         return member_record.pk
 
     digest = hashlib.blake2b(
-        (member_record.email or 'user').encode('utf-8'),
-        digest_size=4,
+        (member_record.email or PORTRAIT_FALLBACK_MAILBOX).encode('utf-8'),
+        digest_size=PORTRAIT_HASH_DIGEST_SIZE,
     ).digest()
     return int.from_bytes(digest, byteorder='big')
 
@@ -63,6 +65,10 @@ def build_initial_portrait(member_record):
     raster.save(payload, format='PNG')
     payload.seek(0)
 
-    mailbox = member_record.email.split('@')[0] if member_record.email else 'user'
+    mailbox = (
+        member_record.email.split('@')[0]
+        if member_record.email
+        else PORTRAIT_FALLBACK_MAILBOX
+    )
     asset_name = f'avatar_{mailbox}_{glyph}.png'
     return ContentFile(payload.getvalue(), name=asset_name)

@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 
 from users.identifiers import (
     COUNTRY_DIGIT_COUNT,
+    GITHUB_HOST,
     LEGACY_PREFIX,
     LOCAL_DIGIT_COUNT,
     UNIFIED_PREFIX,
@@ -67,7 +68,7 @@ def assert_github_host(target_url):
     if not target_url:
         return target_url
 
-    if 'github.com' not in target_url.lower():
+    if GITHUB_HOST not in target_url.lower():
         raise forms.ValidationError('Ссылка должна вести на GitHub')
 
     return target_url
